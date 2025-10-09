@@ -68,7 +68,7 @@ export const NoteCard = ({ note, onUpdate, onDelete, onTogglePin }: NoteCardProp
       <div className={`absolute top-0 left-0 w-full h-1 ${colorDots[note.color]}`} />
       
       {/* Pin indicator */}
-      {note.isPinned && (
+      {note.pinned && (
         <div className="absolute top-2 right-2">
           <Pin className="w-4 h-4 text-primary" />
         </div>
@@ -138,7 +138,7 @@ export const NoteCard = ({ note, onUpdate, onDelete, onTogglePin }: NoteCardProp
               onClick={() => onTogglePin(note.id)}
               className="h-7 w-7 p-0 hover:bg-background/50"
             >
-              {note.isPinned ? (
+              {note.pinned ? (
                 <PinOff className="w-3 h-3" />
               ) : (
                 <Pin className="w-3 h-3" />
