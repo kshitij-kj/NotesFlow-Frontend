@@ -81,41 +81,40 @@ export const useNotes = () => {
     fetchNotes();
   }, []);
 
-  const fetchNotes = async () => {
-    setIsLoading(true);
-    try {
-      if (isOnline) {
-        const data = await apiRequest("/notes");
-        const transformedNotes = data.map(transformNote);
-        setNotes(transformedNotes);
-        // Cache in localStorage for offline access
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(transformedNotes));
-      } else {
-        // Fallback to localStorage when offline
-        const storedNotes = localStorage.getItem(STORAGE_KEY);
-        if (storedNotes) {
-          const parsedNotes = JSON.parse(storedNotes).map(transformNote);
-          setNotes(parsedNotes);
-        }
+ const fetchNotes = async () => {
+  setIsLoading(true);
+  try {
+    if (isOnline) {
+      // Always fetch from backend when online
+      const data = await apiRequest("/notes");
+      if (Array.isArray(data)) {
+        setNotes(data.map(transformNote));
+        // Update localStorage with latest backend data
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       }
-    } catch (error) {
-      console.error("Failed to fetch notes:", error);
-      // Fallback to localStorage on API error
+    } else {
+      // Fallback to localStorage when offline
       const storedNotes = localStorage.getItem(STORAGE_KEY);
       if (storedNotes) {
-        const parsedNotes = JSON.parse(storedNotes).map(transformNote);
-        setNotes(parsedNotes);
+        setNotes(JSON.parse(storedNotes).map(transformNote));
       }
-      toast({
-        title: "Connection Error",
-        description: "Failed to sync with server. Using local data.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
     }
-  };
-
+  } catch (error) {
+    console.error("Failed to fetch notes:", error);
+    // Fallback to localStorage on API error
+    const storedNotes = localStorage.getItem(STORAGE_KEY);
+    if (storedNotes) {
+      setNotes(JSON.parse(storedNotes).map(transformNote));
+    }
+    toast({
+      title: "Connection Error",
+      description: "Failed to sync with server. Using local data.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
   // Save to localStorage for offline support
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
