@@ -38,6 +38,7 @@ const transformNote = (note: any): Note => ({
   ...note,
   createdAt: new Date(note.createdAt),
   updatedAt: new Date(note.updatedAt),
+  isPinned: note.isPinned ?? false,
 });
 
 export const useNotes = () => {
