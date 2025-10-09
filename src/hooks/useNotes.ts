@@ -81,16 +81,17 @@ export const useNotes = () => {
     fetchNotes();
   }, []);
 
- const fetchNotes = async () => {
+const fetchNotes = async () => {
   setIsLoading(true);
   try {
     if (isOnline) {
       // Always fetch from backend when online
       const data = await apiRequest("/notes");
       if (Array.isArray(data)) {
-        setNotes(data.map(transformNote));
-        // Update localStorage with latest backend data
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        const transformed = data.map(transformNote);
+        setNotes(transformed);
+        // Save transformed notes to localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(transformed));
       }
     } else {
       // Fallback to localStorage when offline
@@ -116,9 +117,10 @@ export const useNotes = () => {
   }
 };
   // Save to localStorage for offline support
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
-  }, [notes]);
+useEffect(() => {
+  // Save the notes in state (already transformed)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+}, [notes]);
 
   const createNote = async (noteData: Omit<Note, "id" | "createdAt" | "updatedAt">) => {
     const tempNote: Note = {
