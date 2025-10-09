@@ -8,12 +8,11 @@ export interface Note {
   color: "purple" | "blue" | "green" | "orange" | "pink" | "yellow";
   createdAt: Date;
   updatedAt: Date;
-  isPinned?: boolean;
+  isPinned: boolean; // made non-optional to avoid undefined issues
 }
 
 // Backend API configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-
 
 // API helper functions
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
@@ -47,10 +46,12 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   return response.json();
 };
 
+// ✅ FIXED: Always ensure `isPinned` is a boolean
 const transformNote = (note: any): Note => ({
   ...note,
   createdAt: new Date(note.createdAt),
   updatedAt: new Date(note.updatedAt),
+  isPinned: note.isPinned === true, // normalize undefined → false
 });
 
 const STORAGE_KEY = "notesflow-notes";
@@ -62,17 +63,17 @@ export const useNotes = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const { toast } = useToast();
 
-  // Monitor online status
+  // Monitor online/offline status
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
@@ -81,57 +82,56 @@ export const useNotes = () => {
     fetchNotes();
   }, []);
 
-const fetchNotes = async () => {
-  setIsLoading(true);
-  try {
-    if (isOnline) {
-      // Always fetch from backend when online
-      const data = await apiRequest("/notes");
-      if (Array.isArray(data)) {
-        const transformed = data.map(transformNote);
-        setNotes(transformed);
-        // Save transformed notes to localStorage
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(transformed));
+  const fetchNotes = async () => {
+    setIsLoading(true);
+    try {
+      if (isOnline) {
+        const data = await apiRequest("/notes");
+        if (Array.isArray(data)) {
+          const transformed = data.map(transformNote);
+          setNotes(transformed);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(transformed));
+        }
+      } else {
+        const storedNotes = localStorage.getItem(STORAGE_KEY);
+        if (storedNotes) {
+          const parsed = JSON.parse(storedNotes).map(transformNote);
+          setNotes(parsed);
+        }
       }
-    } else {
-      // Fallback to localStorage when offline
+    } catch (error) {
+      console.error("Failed to fetch notes:", error);
       const storedNotes = localStorage.getItem(STORAGE_KEY);
       if (storedNotes) {
-        setNotes(JSON.parse(storedNotes).map(transformNote));
+        const parsed = JSON.parse(storedNotes).map(transformNote);
+        setNotes(parsed);
       }
+      toast({
+        title: "Connection Error",
+        description: "Failed to sync with server. Using local data.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Failed to fetch notes:", error);
-    // Fallback to localStorage on API error
-    const storedNotes = localStorage.getItem(STORAGE_KEY);
-    if (storedNotes) {
-      setNotes(JSON.parse(storedNotes).map(transformNote));
-    }
-    toast({
-      title: "Connection Error",
-      description: "Failed to sync with server. Using local data.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
-// Save to localStorage for offline support
-useEffect(() => {
-  // Always save the notes in state (already transformed)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
-}, [notes]);
+  // Always save current notes to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+  }, [notes]);
 
-  const createNote = async (noteData: Omit<Note, "id" | "createdAt" | "updatedAt">) => {
+  const createNote = async (
+    noteData: Omit<Note, "id" | "createdAt" | "updatedAt">
+  ) => {
     const tempNote: Note = {
       ...noteData,
       id: crypto.randomUUID(),
       createdAt: new Date(),
       updatedAt: new Date(),
+      isPinned: noteData.isPinned ?? false,
     };
 
-    // Optimistic update
     setNotes((prev) => [tempNote, ...prev]);
 
     try {
@@ -141,14 +141,12 @@ useEffect(() => {
           body: JSON.stringify(noteData),
         });
 
-        // Fix: If response is null, use tempNote
         const serverNote = response ? transformNote(response) : tempNote;
 
-        // Replace temp note with server response
-        setNotes((prev) => 
-          prev.map(note => note.id === tempNote.id ? serverNote : note)
+        setNotes((prev) =>
+          prev.map((note) => (note.id === tempNote.id ? serverNote : note))
         );
-        
+
         toast({
           title: "Note created",
           description: "Your note has been saved successfully.",
@@ -173,10 +171,12 @@ useEffect(() => {
     }
   };
 
-  const updateNote = async (id: string, updates: Partial<Omit<Note, "id" | "createdAt">>) => {
+  const updateNote = async (
+    id: string,
+    updates: Partial<Omit<Note, "id" | "createdAt">>
+  ) => {
     const optimisticUpdate = { ...updates, updatedAt: new Date() };
-    
-    // Optimistic update
+
     setNotes((prev) =>
       prev.map((note) =>
         note.id === id ? { ...note, ...optimisticUpdate } : note
@@ -189,7 +189,7 @@ useEffect(() => {
           method: "PUT",
           body: JSON.stringify(updates),
         });
-        
+
         toast({
           title: "Note updated",
           description: "Changes saved successfully.",
@@ -212,18 +212,12 @@ useEffect(() => {
   };
 
   const deleteNote = async (id: string) => {
-    // Store the note for potential rollback
-    const noteToDelete = notes.find(note => note.id === id);
-    
-    // Optimistic delete
+    const noteToDelete = notes.find((note) => note.id === id);
     setNotes((prev) => prev.filter((note) => note.id !== id));
 
     try {
       if (isOnline) {
-        await apiRequest(`/notes/${id}`, {
-          method: "DELETE",
-        });
-        
+        await apiRequest(`/notes/${id}`, { method: "DELETE" });
         toast({
           title: "Note deleted",
           description: "Note has been removed successfully.",
@@ -236,11 +230,8 @@ useEffect(() => {
         });
       }
     } catch (error: any) {
-      console.error("Failed to delete note:", error); // <-- Add this line
-      // Rollback on error
-      if (noteToDelete) {
-        setNotes((prev) => [noteToDelete, ...prev]);
-      }
+      console.error("Failed to delete note:", error);
+      if (noteToDelete) setNotes((prev) => [noteToDelete, ...prev]);
       toast({
         title: "Error",
         description: `Failed to delete note from server. ${error.message || error}`,
@@ -250,15 +241,14 @@ useEffect(() => {
   };
 
   const togglePin = async (id: string) => {
-    const currentNote = notes.find(note => note.id === id);
+    const currentNote = notes.find((note) => note.id === id);
     if (!currentNote) return;
 
-    const optimisticUpdate = { 
-      isPinned: !currentNote.isPinned, 
-      updatedAt: new Date() 
+    const optimisticUpdate = {
+      isPinned: !currentNote.isPinned,
+      updatedAt: new Date(),
     };
-    
-    // Optimistic update
+
     setNotes((prev) =>
       prev.map((note) =>
         note.id === id ? { ...note, ...optimisticUpdate } : note
@@ -274,11 +264,15 @@ useEffect(() => {
       }
     } catch (error) {
       console.error("Failed to update pin status:", error);
-      // Rollback on error
+      // rollback
       setNotes((prev) =>
         prev.map((note) =>
-          note.id === id 
-            ? { ...note, isPinned: currentNote.isPinned, updatedAt: currentNote.updatedAt }
+          note.id === id
+            ? {
+                ...note,
+                isPinned: currentNote.isPinned,
+                updatedAt: currentNote.updatedAt,
+              }
             : note
         )
       );
@@ -290,17 +284,19 @@ useEffect(() => {
     }
   };
 
-  // Filter notes based on search query
+  // Filter + sort
   const filteredNotes = notes.filter(
     (note) =>
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       note.content.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Sort notes: pinned first, then by updatedAt
+  // ✅ Safe sort with explicit boolean coercion
   const sortedNotes = filteredNotes.sort((a, b) => {
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
+    const aPinned = !!a.isPinned;
+    const bPinned = !!b.isPinned;
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
     return b.updatedAt.getTime() - a.updatedAt.getTime();
   });
 
