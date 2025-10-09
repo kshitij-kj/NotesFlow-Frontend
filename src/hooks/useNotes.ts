@@ -154,7 +154,7 @@ const togglePin = async (id: string) => {
   try {
     const newPinStatus = !currentNote.isPinned;
 
-    await apiRequest(`/notes/${id}`, {
+    await apiRequest(`/notes/${id}/toggle-pin`, {
       method: "PATCH",
       body: JSON.stringify({ isPinned: newPinStatus }),
     });   
