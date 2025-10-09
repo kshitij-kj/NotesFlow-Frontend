@@ -156,7 +156,12 @@ export const useNotes = () => {
       
       await apiRequest(`/notes/${id}`, {
         method: "PUT",
-        body: JSON.stringify({ isPinned: newPinStatus }),
+        body: JSON.stringify({ 
+          title: currentNote.title,
+          content: currentNote.content,
+          color: currentNote.color,
+          isPinned: newPinStatus 
+        }),
       });
       
       setNotes((prev) =>
