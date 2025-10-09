@@ -116,9 +116,10 @@ const fetchNotes = async () => {
     setIsLoading(false);
   }
 };
-  // Save to localStorage for offline support
+
+// Save to localStorage for offline support
 useEffect(() => {
-  // Save the notes in state (already transformed)
+  // Always save the notes in state (already transformed)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
 }, [notes]);
 
