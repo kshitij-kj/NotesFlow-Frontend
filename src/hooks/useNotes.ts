@@ -157,19 +157,7 @@ const togglePin = async (id: string) => {
     await apiRequest(`/notes/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ isPinned: newPinStatus }),
-    });
-
-    // Update state locally after successful request
-    setNotes(prevNotes =>
-      prevNotes.map(note =>
-        note.id === id ? { ...note, isPinned: newPinStatus } : note
-      )
-    );
-  } catch (error) {
-    console.error("Error toggling pin:", error);
-  }
-};
-      
+    });   
       setNotes((prev) =>
         prev.map((note) =>
           note.id === id ? { ...note, isPinned: newPinStatus, updatedAt: new Date() } : note
