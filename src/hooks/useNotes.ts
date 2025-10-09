@@ -8,7 +8,7 @@ export interface Note {
   color: "purple" | "blue" | "green" | "orange" | "pink" | "yellow";
   createdAt: Date;
   updatedAt: Date;
-  isPinned?: boolean;
+  pinned?: boolean;
 }
 
 // Backend API configuration
@@ -38,7 +38,7 @@ const transformNote = (note: any): Note => ({
   ...note,
   createdAt: new Date(note.createdAt),
   updatedAt: new Date(note.updatedAt),
-  isPinned: note.isPinned === true || note.isPinned === 1 || note.isPinned === "true",
+  pinned: note.pinned === true || note.pinned === 1 || note.pinned === "true",
 });
 
 export const useNotes = () => {
@@ -156,15 +156,15 @@ const togglePin = async (id: string) => {
   if (!currentNote) return;
 
   try {
-    const newPinStatus = !currentNote.isPinned;
+    const newPinStatus = !currentNote.pinned;
 
     await apiRequest(`/notes/${id}/toggle-pin`, {
       method: "PATCH",
-      body: JSON.stringify({ isPinned: newPinStatus }),
+      body: JSON.stringify({ pinned: newPinStatus }),
     });   
       setNotes((prev) =>
         prev.map((note) =>
-          note.id === id ? { ...note, isPinned: newPinStatus, updatedAt: new Date() } : note
+          note.id === id ? { ...note, pinned: newPinStatus, updatedAt: new Date() } : note
         )
       );
       
