@@ -192,8 +192,8 @@ const togglePin = async (id: string) => {
 
   // Sort notes: pinned first, then by updatedAt
   const sortedNotes = filteredNotes.sort((a, b) => {
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
     return b.updatedAt.getTime() - a.updatedAt.getTime();
   });
 
