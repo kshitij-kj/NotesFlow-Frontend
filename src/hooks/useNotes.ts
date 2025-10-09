@@ -147,22 +147,28 @@ export const useNotes = () => {
     }
   };
 
-  const togglePin = async (id: string) => {
-    const currentNote = notes.find(note => note.id === id);
-    if (!currentNote) return;
+const togglePin = async (id: string) => {
+  const currentNote = notes.find(note => note.id === id);
+  if (!currentNote) return;
 
-    try {
-      const newPinStatus = !currentNote.isPinned;
-      
-      await apiRequest(`/notes/${id}`, {
-        method: "PUT",
-        body: JSON.stringify({ 
-          title: currentNote.title,
-          content: currentNote.content,
-          color: currentNote.color,
-          isPinned: newPinStatus 
-        }),
-      });
+  try {
+    const newPinStatus = !currentNote.isPinned;
+
+    await apiRequest(`/notes/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ isPinned: newPinStatus }),
+    });
+
+    // Update state locally after successful request
+    setNotes(prevNotes =>
+      prevNotes.map(note =>
+        note.id === id ? { ...note, isPinned: newPinStatus } : note
+      )
+    );
+  } catch (error) {
+    console.error("Error toggling pin:", error);
+  }
+};
       
       setNotes((prev) =>
         prev.map((note) =>
