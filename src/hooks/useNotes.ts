@@ -56,7 +56,10 @@ export const useNotes = () => {
     setIsLoading(true);
     try {
       const data = await apiRequest("/notes");
+      console.log("Raw backend response:", data);
       const transformedNotes = data.map(transformNote);
+      console.log("Transformed notes:", transformedNotes);
+      console.log("Pinned notes count:", transformedNotes.filter((n: Note) => n.isPinned).length);
       setNotes(transformedNotes);
     } catch (error) {
       console.error("Failed to fetch notes:", error);
